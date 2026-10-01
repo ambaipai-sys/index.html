@@ -441,15 +441,14 @@
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tadimee-game-app';
-        let firebaseConfig = null;
-
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } catch (e) {
-                console.error("Failed to parse firebase config:", e);
-            }
-        }
+        let firebaseConfig = {
+    apiKey: "AIzaSy...", // ของคุณ
+    authDomain: "tadimee-game.firebaseapp.com",
+    projectId: "tadimee-game",
+    storageBucket: "tadimee-game.appspot.com",
+    messagingSenderId: "...",
+    appId: "1:...:web:..."
+};
 
         // Default Firebase Config Fallback if not injected
         if (!firebaseConfig) {
