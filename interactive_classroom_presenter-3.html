@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตาดีมีแต้ม 👀🎯 - Live Classroom Real-Time Multiplayer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800;900&family=Prompt:wght@300;400;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#060B19',
+                            900: '#0B132B',
+                            800: '#1C2541',
+                            700: '#2A3A5E',
+                            600: '#3D527C'
+                        },
+                        electric: '#3A86FF',
+                        lime: '#06D6A0',
+                        accentYellow: '#FFD166',
+                        kahootRed: '#E21B3C',
+                        kahootBlue: '#1368CE',
+                        kahootYellow: '#D89E00',
+                        kahootGreen: '#26890C'
+                    },
+                    fontFamily: {
+                        kanit: ['Kanit', 'sans-serif'],
+                        prompt: ['Prompt', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #060B19;
+            color: #F8FAFC;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .grid-cell {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .grid-cell:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .kahoot-btn {
+            transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3);
+        }
+        .kahoot-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B132B;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A3A5E;
+            border-radius: 4px;
+        }
+        .pulse-glow {
+            animation: pulse-glow-anim 2s infinite;
+        }
+        @keyframes pulse-glow-anim {
+            0% { box-shadow: 0 0 0 0 rgba(58, 134, 255, 0.6); }
+            70% { box-shadow: 0 0 0 16px rgba(58, 134, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(58, 134, 255, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-navy-950 text-slate-100">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-navy-900/90 backdrop-blur border-b border-navy-800 px-4 md:px-8 py-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-electric to-blue-600 text-white p-2 rounded-xl font-kanit font-extrabold text-xl shadow-lg">
+                👀🎯
+            </div>
+            <div>
+                <h1 class="text-lg md:text-2xl font-kanit font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-electric via-lime to-accentYellow">
+                    ตาดีมีแต้ม Live
+                </h1>
+                <p class="text-[10px] md:text-xs text-slate-400 font-kanit hidden sm:block">Real-time Cross-Device Classroom Game</p>
+            </div>
+        </div>
+
+        <!-- Connection Status & Role Switcher -->
+        <div class="flex items-center space-x-2">
+            <div id="connection-badge" class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-[10px] md:text-xs font-kanit font-bold flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span id="connection-status-text">กำลังเชื่อมต่อระบบออนไลน์...</span>
+            </div>
+
+            <!-- Role Mode Switcher Buttons -->
+            <div class="flex items-center space-x-1 bg-navy-950 p-1 rounded-2xl border border-navy-800">
+                <button id="mode-btn-host" onclick="switchAppRole('host')" class="px-3 py-1.5 rounded-xl font-kanit text-xs md:text-sm font-bold transition flex items-center space-x-1 bg-electric text-white shadow">
+                    <span>🖥️</span>
+                    <span class="hidden md:inline">จออาจารย์ (Host)</span>
+                </button>
+                <button id="mode-btn-player" onclick="switchAppRole('player')" class="px-3 py-1.5 rounded-xl font-kanit text-xs md:text-sm font-bold transition flex items-center space-x-1 text-slate-400 hover:text-white">
+                    <span>📱</span>
+                    <span class="hidden md:inline">จอนักศึกษา (Player)</span>
+                </button>
+                <button id="mode-btn-split" onclick="switchAppRole('split')" class="px-3 py-1.5 rounded-xl font-kanit text-xs md:text-sm font-bold transition flex items-center space-x-1 text-slate-400 hover:text-white">
+                    <span>🖥️📱</span>
+                    <span class="hidden sm:inline">โหมดจำลองคู่</span>
+                </button>
+            </div>
+
+            <button id="sound-btn" onclick="toggleSound()" class="p-2 bg-navy-800 hover:bg-navy-700 rounded-xl transition text-slate-300 hover:text-white text-sm" title="เปิด/ปิด เสียง">
+                🔊
+            </button>
+            <button onclick="toggleFullScreen()" class="p-2 bg-navy-800 hover:bg-navy-700 rounded-xl transition text-slate-300 hover:text-white text-sm hidden sm:block" title="เต็มจอ">
+                ⛶
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Content Workspace -->
+    <main id="app-viewport" class="flex-grow flex items-center justify-center p-3 md:p-6">
+        <!-- Dynamic content injected here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-navy-900/60 border-t border-navy-800/80 py-2.5 px-6 text-center text-xs text-slate-400 font-kanit flex justify-between items-center">
+        <span>เล่นได้หลายเครื่องพร้อมกันจริงด้วย Online Room PIN 🎯</span>
+        <span class="hidden md:inline">Memory • Live Sync • Probability • Real-Time Classroom</span>
+    </footer>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Web Audio API Synthesizer
+        let soundEnabled = true;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'tick') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'beep-high') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1200, now);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                osc.start(now);
+                osc.stop(now + 0.45);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'join') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'reveal') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-2.5 rounded-xl text-xs font-kanit font-bold shadow-xl transition-all transform translate-y-2 opacity-0 flex items-center space-x-2 ${
+                type === 'success' ? 'bg-emerald-500 text-white' :
+                type === 'error' ? 'bg-rose-500 text-white' : 'bg-electric text-white'
+            }`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span><span>${msg}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+
+    <script>
+        // Game Dataset Configuration
+        const GAME_DATA = [
+            {
+                round: 1,
+                name: "ROUND 1 — 12-QUESTION CHALLENGE 👀",
+                gridSize: { rows: 4, cols: 5 },
+                totalItems: 20,
+                memoryTime: 10, // 10 seconds
+                grid: [
+                    ["📱", "🍎", "🔑", "🎧", "✏️"],
+                    ["📕", "📱", "⌚", "🍎", "🕶️"],
+                    ["🔑", "🎧", "⌚", "📕", "✏️"],
+                    ["🍎", "🔑", "📱", "🥤", "🕶️"]
+                ],
+                questions: [
+                    {
+                        q: "1. แอปเปิล (🍎) ในภาพมีทั้งหมดกี่ลูก?",
+                        options: ["2 ลูก", "3 ลูก", "4 ลูก", "5 ลูก"],
+                        correct: 1, // "3 ลูก"
+                        explanation: "แอปเปิล (🍎) มีทั้งหมด 3 ลูก อยู่ที่ตำแหน่งชิ้นที่ 2, 9 และ 16"
+                    },
+                    {
+                        q: "2. สิ่งของที่อยู่ตรงกลางตารางคืออะไร?",
+                        options: ["Watch (⌚)", "Phone (📱)", "Key (🔑)", "Glasses (🕶️)"],
+                        correct: 0, // "Watch (⌚)"
+                        explanation: "ตำแหน่งตรงกลางของตาราง (ชิ้นที่ 8 และ 13) คือ นาฬิกา (Watch ⌚)"
+                    },
+                    {
+                        q: "3. โทรศัพท์ (📱) ในภาพมีทั้งหมดกี่ชิ้น?",
+                        options: ["2 ชิ้น", "3 ชิ้น", "4 ชิ้น", "5 ชิ้น"],
+                        correct: 1, // "3 ชิ้น"
+                        explanation: "โทรศัพท์ (📱) มีทั้งหมด 3 ชิ้น อยู่ที่ตำแหน่งชิ้นที่ 1, 7 และ 18"
+                    },
+                    {
+                        q: "4. หนังสือ (📕) ในภาพมีทั้งหมดกี่เล่ม?",
+                        options: ["1 เล่ม", "2 เล่ม", "3 เล่ม", "4 เล่ม"],
+                        correct: 1, // "2 เล่ม"
+                        explanation: "หนังสือ (📕) มีทั้งหมด 2 เล่ม อยู่ที่ตำแหน่งชิ้นที่ 6 และ 14"
+                    },
+                    {
+                        q: "5. สิ่งของชิ้นแรก (ตำแหน่งที่ 1) คืออะไร?",
+                        options: ["Phone (📱)", "Apple (🍎)", "Key (🔑)", "Pencil (✏️)"],
+                        correct: 0, // "Phone (📱)"
+                        explanation: "สิ่งของชิ้นแรกสุดมุมบนซ้าย (ตำแหน่งที่ 1) คือ โทรศัพท์ Phone (📱)"
+                    },
+                    {
+                        q: "6. แว่นตา (🕶️) ในภาพมีทั้งหมดกี่อัน?",
+                        options: ["1 อัน", "2 อัน", "3 อัน", "4 อัน"],
+                        correct: 1, // "2 อัน"
+                        explanation: "แว่นตา (🕶️️) มีทั้งหมด 2 อัน อยู่ที่ตำแหน่งชิ้นที่ 10 และ 20"
+                    },
+                    {
+                        q: "7. สิ่งของชิ้นสุดท้าย (ตำแหน่งที่ 20) คืออะไร?",
+                        options: ["Pencil (✏)", "Key (🔑)", "Glasses (🕶️)", "Phone (📱)"],
+                        correct: 2, // "Glasses (🕶️)"
+                        explanation: "สิ่งของชิ้นสุดท้ายมุมขวาล่าง (ตำแหน่งที่ 20) คือ แว่นตา Glasses (🕶️️)"
+                    },
+                    {
+                        q: "8. ดินสอ (✏️) ในภาพมีทั้งหมดกี่แท่ง?",
+                        options: ["1 แท่ง", "2 แท่ง", "3 แท่ง", "4 แท่ง"],
+                        correct: 1, // "2 แท่ง"
+                        explanation: "ดินสอ (✏️) มีทั้งหมด 2 แท่ง อยู่ที่ตำแหน่งชิ้นที่ 5 และ 15"
+                    },
+                    {
+                        q: "9. สิ่งของชิ้นที่ 10 (แถว 2 คอลัมน์ 5) คืออะไร?",
+                        options: ["Glasses (🕶️️)", "Book (📕)", "Watch (⌚)", "Apple (🍎)"],
+                        correct: 0, // "Glasses (🕶️)"
+                        explanation: "นับตามลำดับ 1 ถึง 20 ชิ้นที่ 10 คือ แว่นตา Glasses (🕶️)"
+                    },
+                    {
+                        q: "10. หูฟัง (🎧) ในภาพมีทั้งหมดกี่ชิ้น?",
+                        options: ["1 ชิ้น", "2 ชิ้น", "3 ชิ้น", "4 ชิ้น"],
+                        correct: 1, // "2 ชิ้น"
+                        explanation: "หูฟัง (🎧) มีทั้งหมด 2 ชิ้น อยู่ที่ตำแหน่งชิ้นที่ 4 และ 12"
+                    },
+                    {
+                        q: "11. สิ่งของชิ้นที่ 5 (แถว 1 คอลัมน์ 5) คืออะไร?",
+                        options: ["Headphone (🎧)", "Pencil (✏️)", "Key (🔑)", "Apple (🍎)"],
+                        correct: 1, // "Pencil (✏️)"
+                        explanation: "ชิ้นที่ 5 ท้ายแถวแรก คือ ดินสอ Pencil (✏️)"
+                    },
+                    {
+                        q: "12. กุญแจ (🔑) ในภาพมีทั้งหมดกี่ดอก?",
+                        options: ["2 ดอก", "3 ดอก", "4 ดอก", "5 ดอก"],
+                        correct: 1, // "3 ดอก"
+                        explanation: "กุญแจ (🔑) มีทั้งหมด 3 ดอก อยู่ที่ตำแหน่งชิ้นที่ 3, 11 และ 17"
+                    }
+                ]
+            },
+            {
+                round: 2,
+                name: "ROUND 2 — MEDIUM 🧠",
+                gridSize: { rows: 5, cols: 5 },
+                totalItems: 25,
+                memoryTime: 8,
+                grid: [
+                    ["🍎", "📱", "🔑", "🎧", "🍎"],
+                    ["🥤", "🔑", "📕", "🧸", "📱"],
+                    ["🪙", "📱", "🔑", "🎒", "🍎"],
+                    ["🕶️", "🔑", "🖊️", "📱", "🍪"],
+                    ["🎧", "☕", "🔑", "💻", "🍎"]
+                ],
+                questions: [
+                    {
+                        q: "1. มีสิ่งของชนิดใดปรากฏมากที่สุดในตาราง 5x5 นี้?",
+                        options: ["🍎 (4 ลูก)", "📱 (4 เครื่อง)", "🔑 (5 ดอก)", "🎧 (2 ชิ้น)"],
+                        correct: 2,
+                        explanation: "กุญแจ (🔑) มีจำนวนมากที่สุดถึง 5 ดอก"
+                    },
+                    {
+                        q: "2. มี “กุญแจ (🔑)” ปรากฏทั้งหมดกี่ดอก?",
+                        options: ["3 ดอก", "4 ดอก", "5 ดอก", "6 ดอก"],
+                        correct: 2,
+                        explanation: "กุญแจมี 5 ดอก อยู่ในแถวที่ 1, 2, 3, 4 และ 5"
+                    },
+                    {
+                        q: "3. โทรศัพท์ (📱) อยู่ทั้งหมดกี่ตำแหน่ง?",
+                        options: ["2 ตำแหน่ง", "3 ตำแหน่ง", "4 ตำแหน่ง", "5 ตำแหน่ง"],
+                        correct: 2,
+                        explanation: "โทรศัพท์มีทั้งหมด 4 เครื่อง"
+                    }
+                ]
+            },
+            {
+                round: 3,
+                name: "ROUND 3 — HARD 🔥",
+                gridSize: { rows: 5, cols: 6 },
+                totalItems: 30,
+                memoryTime: 6,
+                grid: [
+                    ["🍎", "📱", "🔑", "🎧", "🟡", "🍪"],
+                    ["🥤", "🍎", "📕", "🧸", "✏️", "📱"],
+                    ["🪙", "📱", "🟡", "🎒", "🍎", "🔑"],
+                    ["🕶️", "⌚", "🖊️", "📱", "🍪", "☕"],
+                    ["💻", "🎧", "🔑", "🎒", "🥤", "💻"]
+                ],
+                questions: [
+                    {
+                        q: "1. มี “แอปเปิล (🍎)” ทั้งหมดกี่ลูกในตาราง 30 ช่องนี้?",
+                        options: ["2 ลูก", "3 ลูก", "4 ลูก", "5 ลูก"],
+                        correct: 1,
+                        explanation: "แอปเปิลมีทั้งหมด 3 ลูก"
+                    },
+                    {
+                        q: "2. สิ่งของตรงกลางภาพ (แถว 3 คอลัมน์ 3) คืออะไร?",
+                        options: ["📱", "🎧", "🟡", "🍎"],
+                        correct: 2,
+                        explanation: "ตำแหน่งแถว 3 คอลัมน์ 3 คือ วงกลมสีเหลือง 🟡"
+                    },
+                    {
+                        q: "3. สิ่งของชนิดใดมีจำนวนมากที่สุดในตารางนี้?",
+                        options: ["📱 (4 เครื่อง)", "🍎 (3 ลูก)", "🔑 (3 ดอก)", "🍪 (2 ชิ้น)"],
+                        correct: 0,
+                        explanation: "โทรศัพท์ (📱) มีมากที่สุดจำนวน 4 เครื่อง"
+                    }
+                ]
+            },
+            {
+                round: 4,
+                name: "FINAL ROUND — PROBABILITY 🎯",
+                isProbabilityRound: true,
+                questions: [
+                    {
+                        q: "จากภาพใน Round 3 (สิ่งของ 30 ชิ้น, มี 🍎 3 ลูก) หากสุ่มเลือก 1 ชิ้น ความน่าจะเป็นที่จะได้ 🍎 คิดเป็นกี่เปอร์เซ็นต์?",
+                        options: ["5%", "10%", "15%", "20%"],
+                        correct: 1,
+                        explanation: "P(🍎) = 3 / 30 = 1/10 = 10%"
+                    },
+                    {
+                        q: "หากสุ่มเลือกสิ่งของ 1 ชิ้นจาก 30 ชิ้น ความน่าจะเป็นที่จะ 'ไม่ใช่ 🍎' เท่ากับเท่าไร?",
+                        options: ["70%", "80%", "90%", "95%"],
+                        correct: 2,
+                        explanation: "P(ไม่ใช่ 🍎) = 1 - P(🍎) = 1 - 0.10 = 90%"
+                    },
+                    {
+                        q: "[Bonus Challenge] ถ้าสุ่มได้ 📱 (+10 คะแนน), สุ่มได้ 🍎 (+5 คะแนน) และสุ่มได้สิ่งอื่น (0 คะแนน) ค่าคาดหมาย E(X) คือเท่าไร?",
+                        options: ["1.00 คะแนน", "1.83 คะแนน", "2.50 คะแนน", "3.00 คะแนน"],
+                        correct: 1,
+                        explanation: "E(X) = (10 × 4/30) + (5 × 3/30) + (0 × 23/30) = 55/30 ≈ 1.83 คะแนน"
+                    }
+                ]
+            }
+        ];
+    </script>
+
+    <!-- Real-Time Firebase Engine -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tadimee-game-app';
+        let firebaseConfig = null;
+
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } catch (e) {
+                console.error("Failed to parse firebase config:", e);
+            }
+        }
+
+        // Default Firebase Config Fallback if not injected
+        if (!firebaseConfig) {
+            firebaseConfig = {
+                apiKey: "AIzaSyDummyKeyForFallback",
+                authDomain: "tadimee-app.firebaseapp.com",
+                projectId: "tadimee-app",
+                storageBucket: "tadimee-app.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:abcdef"
+            };
+        }
+
+        let app, auth, db;
+        let currentUser = null;
+        let roomUnsubscribe = null;
+
+        // Make modules accessible to global scope
+        window.appId = appId;
+        window.currentRole = 'host'; // 'host', 'player', 'split'
+        window.roomPin = '8492';
+
+        // Local Memory Copy of Room State
+        window.roomState = {
+            pin: '8492',
+            status: 'lobby', // 'lobby', 'memory', 'question', 'explanation', 'final'
+            currentRoundIdx: 0,
+            currentQuestionIdx: 0,
+            memoryTimer: 10,
+            questionStartTime: 0,
+            players: [
+                { id: 'p_demo_1', name: 'สมชาย 🚀', score: 0, lastAnswer: null, answeredAt: 0 },
+                { id: 'p_demo_2', name: 'สุดา 🌸', score: 0, lastAnswer: null, answeredAt: 0 }
+            ]
+        };
+
+        window.myPlayerId = 'p_user_' + Math.floor(1000 + Math.random() * 9000);
+        window.myPlayerName = 'นักศึกษา ' + Math.floor(10 + Math.random() * 90);
+        window.hostTimerInterval = null;
+
+        // Local Fallback Broadcast Channel for same-browser testing
+        const broadcastChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('tadimee_sync_channel') : null;
+        if (broadcastChannel) {
+            broadcastChannel.onmessage = (event) => {
+                if (event.data && event.data.type === 'STATE_UPDATE') {
+                    window.roomState = event.data.state;
+                    window.renderApp();
+                }
+            };
+        }
+
+        async function initFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                window.db = db;
+                window.auth = auth;
+
+                // Auth step
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = cred.user;
+                    } catch (e) {
+                        const cred = await signInAnonymously(auth);
+                        currentUser = cred.user;
+                    }
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+
+                updateConnectionBadge(true, "เชื่อมต่อ Live Sync เรียบร้อย ✅");
+                subscribeToRoom(window.roomPin);
+
+            } catch (err) {
+                console.warn("Firebase live mode using local sync mode:", err);
+                updateConnectionBadge(false, "โหมดจำลองในเครื่อง (Local Sync)");
+            }
+        }
+
+        function updateConnectionBadge(isOnline, text) {
+            const badge = document.getElementById('connection-badge');
+            const txt = document.getElementById('connection-status-text');
+            if (txt) txt.innerText = text;
+            if (badge) {
+                if (isOnline) {
+                    badge.className = "px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-[10px] md:text-xs font-kanit font-bold flex items-center space-x-1";
+                } else {
+                    badge.className = "px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-[10px] md:text-xs font-kanit font-bold flex items-center space-x-1";
+                }
+            }
+        }
+
+        // Subscribe to real-time room changes in Firestore
+        window.subscribeToRoom = function(pin) {
+            window.roomPin = pin;
+            if (!db || !currentUser) return;
+
+            if (roomUnsubscribe) roomUnsubscribe();
+
+            // Strict Path Rule: /artifacts/{appId}/public/data/gameRooms/{roomPin}
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'gameRooms', pin);
+
+            roomUnsubscribe = onSnapshot(roomRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    window.roomState = snapshot.data();
+                    window.renderApp();
+                } else {
+                    // Create room if Host and doesn't exist
+                    if (window.currentRole === 'host') {
+                        window.pushStateToCloud();
+                    }
+                }
+            }, (err) => {
+                console.error("Snapshot error:", err);
+            });
+        };
+
+        // Push state update to cloud & local broadcast channel
+        window.pushStateToCloud = async function() {
+            window.renderApp();
+
+            if (broadcastChannel) {
+                broadcastChannel.postMessage({ type: 'STATE_UPDATE', state: window.roomState });
+            }
+
+            if (!db || !currentUser) return;
+
+            try {
+                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'gameRooms', window.roomPin);
+                await setDoc(roomRef, window.roomState, { merge: true });
+            } catch (err) {
+                console.error("Failed to push state to Firestore:", err);
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+            window.renderApp();
+        });
+    </script>
+
+    <script>
+        function switchAppRole(role) {
+            window.currentRole = role;
+
+            ['host', 'player', 'split'].forEach(r => {
+                const btn = document.getElementById(`mode-btn-${r}`);
+                if (r === role) {
+                    btn.className = "px-3 py-1.5 rounded-xl font-kanit text-xs md:text-sm font-bold transition flex items-center space-x-1 bg-electric text-white shadow";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-xl font-kanit text-xs md:text-sm font-bold transition flex items-center space-x-1 text-slate-400 hover:text-white";
+                }
+            });
+
+            renderApp();
+        }
+
+        function renderApp() {
+            const viewport = document.getElementById('app-viewport');
+            if (!viewport) return;
+            
+            if (window.currentRole === 'host') {
+                viewport.innerHTML = `<div class="w-full max-w-5xl mx-auto">${renderHostView()}</div>`;
+            } else if (window.currentRole === 'player') {
+                viewport.innerHTML = `<div class="w-full max-w-md mx-auto">${renderPlayerView()}</div>`;
+            } else if (window.currentRole === 'split') {
+                viewport.innerHTML = `
+                    <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <div class="lg:col-span-8 bg-navy-900 border border-navy-800 p-4 rounded-3xl shadow-2xl">
+                            <div class="text-xs font-kanit text-electric mb-2 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <span>🖥️ หน้าจออาจารย์ (ขึ้นจอใหญ่)</span>
+                                <span class="text-slate-400 font-mono text-[10px]">PIN: ${window.roomState.pin}</span>
+                            </div>
+                            ${renderHostView()}
+                        </div>
+                        <div class="lg:col-span-4 bg-navy-900 border border-navy-800 p-4 rounded-3xl shadow-2xl">
+                            <div class="text-xs font-kanit text-lime mb-2 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <span>📱 หน้าจอนักศึกษา (มือถือ)</span>
+                                <span class="text-slate-400 font-mono text-[10px]">${window.myPlayerName}</span>
+                            </div>
+                            ${renderPlayerView()}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+
+    <script>
+        // Host View UI Logic
+        function renderHostView() {
+            const state = window.roomState;
+            const roundData = GAME_DATA[state.currentRoundIdx] || GAME_DATA[0];
+
+            if (state.status === 'lobby') {
+                return `
+                    <div class="text-center space-y-6 bg-navy-900/90 border border-navy-800 p-6 md:p-10 rounded-3xl shadow-2xl">
+                        <div class="inline-block px-4 py-1.5 bg-electric/20 text-electric border border-electric/30 rounded-full font-kanit text-xs font-bold">
+                            HOST CLASSROOM PRESENTER
+                        </div>
+                        <h1 class="text-3xl md:text-5xl font-kanit font-black text-white">
+                            ห้องเรียนตาดีมีแต้ม 👀🎯
+                        </h1>
+
+                        <!-- PIN Code Display -->
+                        <div class="bg-navy-950 p-6 rounded-3xl border-2 border-electric max-w-md mx-auto space-y-3 shadow-2xl pulse-glow">
+                            <span class="text-slate-400 font-kanit text-xs uppercase tracking-widest block font-bold">GAME PIN CODE</span>
+                            <div class="flex items-center justify-center space-x-3">
+                                <span class="font-mono text-5xl md:text-6xl font-black text-lime tracking-wider">${state.pin}</span>
+                                <button onclick="changeRoomPin()" class="text-slate-400 hover:text-white p-2 text-sm bg-navy-800 rounded-xl" title="เปลี่ยน PIN">✏️</button>
+                            </div>
+                            <p class="text-[11px] text-slate-400 font-kanit">นักศึกษาเปิดมือถือ แล้วพิมพ์รหัส PIN นี้เพื่อเข้าเล่นจริงได้เลย!</p>
+                        </div>
+
+                        <!-- Player Counter & Lobby Roster -->
+                        <div class="space-y-3">
+                            <div class="flex justify-center items-center space-x-2 font-kanit">
+                                <span class="text-lg">👥</span>
+                                <span class="text-slate-300 font-bold">นักศึกษาเข้าร่วมแล้ว:</span>
+                                <span class="text-accentYellow font-mono text-2xl font-bold">${state.players.length} คน</span>
+                            </div>
+
+                            <div class="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto min-h-[70px] p-4 bg-navy-950/70 rounded-2xl border border-navy-800">
+                                ${state.players.length === 0 ? `
+                                    <span class="text-slate-500 font-kanit text-xs self-center animate-pulse">กำลังรอนักศึกษาใส่ PIN เข้าร่วมห้อง...</span>
+                                ` : state.players.map(p => `
+                                    <span class="px-3.5 py-1.5 bg-navy-800 border border-navy-700 text-slate-100 font-kanit text-xs md:text-sm font-bold rounded-xl flex items-center space-x-1.5 shadow">
+                                        <span>🟢</span>
+                                        <span>${p.name}</span>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-center space-x-3">
+                            <button onclick="hostStartMemoryPhase()" class="px-8 py-4 bg-gradient-to-r from-lime to-emerald-500 text-navy-950 font-kanit font-black text-xl rounded-2xl shadow-lg hover:scale-105 transition active:scale-95">
+                                🚀 เริ่มเล่น ROUND 1 (ตาราง 20 ช่อง)
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'memory') {
+                let gridHtml = `<div class="grid gap-2 md:gap-3 w-full max-w-3xl mx-auto" style="grid-template-columns: repeat(${roundData.gridSize.cols}, minmax(0, 1fr));">`;
+                for (let r = 0; r < roundData.gridSize.rows; r++) {
+                    for (let c = 0; c < roundData.gridSize.cols; c++) {
+                        gridHtml += `
+                            <div class="grid-cell bg-navy-800 border-2 border-navy-700 hover:border-electric rounded-2xl aspect-square flex items-center justify-center text-3xl md:text-5xl shadow-md">
+                                ${roundData.grid[r][c]}
+                            </div>
+                        `;
+                    }
+                }
+                gridHtml += `</div>`;
+
+                return `
+                    <div class="space-y-6 text-center">
+                        <div class="flex justify-between items-center bg-navy-900 p-4 rounded-2xl border border-navy-800 font-kanit">
+                            <div class="text-left">
+                                <span class="text-xs text-electric font-bold block">${roundData.name}</span>
+                                <h3 class="text-lg md:text-xl font-bold text-white">สังเกตและจำตำแหน่งสิ่งของให้ดีที่สุด!</h3>
+                            </div>
+                            <div class="flex items-center space-x-3 bg-navy-950 px-5 py-2.5 rounded-xl border border-navy-800">
+                                <span class="text-xs text-slate-400 font-kanit">เวลาจำ:</span>
+                                <span class="font-mono text-3xl font-extrabold text-accentYellow animate-pulse">
+                                    ${state.memoryTimer}
+                                </span>
+                                <span class="text-xs text-slate-400 font-kanit">วิ</span>
+                            </div>
+                        </div>
+
+                        ${gridHtml}
+
+                        <button onclick="hostEndMemoryPhase()" class="px-6 py-2 bg-navy-800 hover:bg-navy-700 text-slate-300 font-kanit text-xs rounded-xl border border-navy-700">
+                            ⏩ ข้ามเวลาจำภาพไปปล่อยคำถาม
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'question' || state.status === 'explanation') {
+                const qData = roundData.questions[state.currentQuestionIdx];
+                const colors = [
+                    { bg: 'bg-kahootRed', shape: '▲', label: 'A' },
+                    { bg: 'bg-kahootBlue', shape: '◆', label: 'B' },
+                    { bg: 'bg-kahootYellow', shape: '●', label: 'C' },
+                    { bg: 'bg-kahootGreen', shape: '■', label: 'D' }
+                ];
+
+                const totalAnswered = state.players.filter(p => p.lastAnswer !== null).length;
+
+                return `
+                    <div class="space-y-6">
+                        <!-- Top Header Bar -->
+                        <div class="flex justify-between items-center bg-navy-900 p-4 rounded-2xl border border-navy-800 font-kanit">
+                            <span class="text-xs text-slate-300">
+                                คำถามข้อที่ <strong>${state.currentQuestionIdx + 1}</strong> / ${roundData.questions.length} (${roundData.name})
+                            </span>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-xs font-mono text-lime bg-navy-950 px-3 py-1 rounded-lg border border-navy-800">
+                                    ตอบแล้ว: ${totalAnswered} / ${state.players.length} คน
+                                </span>
+                                <button onclick="toggleHostGridModal(true)" class="px-3 py-1 bg-navy-800 hover:bg-navy-700 text-slate-300 text-xs rounded-lg border border-navy-700">
+                                    👁️ ตารางอ้างอิง
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Question Box -->
+                        <div class="bg-navy-900 border-2 border-navy-800 p-6 md:p-8 rounded-3xl shadow-2xl text-center">
+                            <h2 class="text-2xl md:text-3xl font-kanit font-black text-white leading-relaxed">
+                                ${qData.q}
+                            </h2>
+                        </div>
+
+                        <!-- Options List -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${qData.options.map((opt, idx) => {
+                                const c = colors[idx];
+                                const isCorrect = (idx === qData.correct);
+                                const showAns = state.status === 'explanation';
+
+                                // Count how many answered this option
+                                const countForOpt = state.players.filter(p => p.lastAnswer === idx).length;
+
+                                return `
+                                    <div class="${c.bg} ${showAns && isCorrect ? 'ring-4 ring-lime scale-102' : ''} ${showAns && !isCorrect ? 'opacity-40' : ''} text-white p-4 md:p-5 rounded-2xl flex items-center justify-between shadow-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl font-black">${c.shape}</span>
+                                            <span class="font-kanit font-extrabold text-lg md:text-xl">${c.label}. ${opt}</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            ${showAns ? `<span class="bg-black/40 px-2.5 py-1 rounded-lg font-mono text-xs">${countForOpt} คน</span>` : ''}
+                                            ${showAns && isCorrect ? '<span class="text-2xl">✅</span>' : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        ${state.status === 'question' ? `
+                            <div class="flex justify-center pt-2">
+                                <button onclick="hostShowExplanation()" class="px-8 py-3.5 bg-lime text-navy-950 font-kanit font-extrabold text-lg rounded-2xl shadow-lg hover:scale-105 transition">
+                                    เฉลยคำตอบ & แสดงคำอธิบาย ➔
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="bg-navy-900 border border-lime/40 p-5 rounded-2xl space-y-3 font-kanit">
+                                <div class="text-lime font-bold text-base flex items-center space-x-2">
+                                    <span>💡 คำอธิบายเชิงวิเคราะห์:</span>
+                                </div>
+                                <p class="text-slate-200 text-sm">${qData.explanation}</p>
+                                <div class="pt-2 flex justify-end">
+                                    <button onclick="hostNextQuestion()" class="px-6 py-2.5 bg-electric text-white font-bold text-sm rounded-xl hover:bg-blue-600 transition">
+                                        ไปข้อถัดไป ➔
+                                    </button>
+                                </div>
+                            </div>
+                        `}
+
+                        <!-- Host Reference Grid Modal -->
+                        <div id="host-grid-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur z-50 flex items-center justify-center p-4">
+                            <div class="bg-navy-900 border border-navy-800 p-6 rounded-3xl max-w-2xl w-full space-y-4 text-center">
+                                <h3 class="text-lg font-kanit font-bold text-white">ตารางสิ่งของอ้างอิง (${roundData.name})</h3>
+                                <div id="host-modal-grid-content"></div>
+                                <button onclick="toggleHostGridModal(false)" class="px-6 py-2 bg-navy-800 hover:bg-navy-700 text-white rounded-xl font-kanit text-xs">
+                                    ปิดหน้าต่าง
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'final') {
+                const sortedPlayers = [...state.players].sort((a,b) => b.score - a.score);
+
+                return `
+                    <div class="text-center space-y-8 bg-navy-900 border border-navy-800 p-8 rounded-3xl shadow-2xl">
+                        <div>
+                            <span class="text-5xl block mb-2">🏆</span>
+                            <h2 class="text-3xl md:text-5xl font-kanit font-black text-white">
+                                สรุปผลการแข่งขัน & บทเรียน
+                            </h2>
+                            <p class="text-slate-400 font-kanit text-sm mt-1">ตาดีมีแต้ม 👀🎯</p>
+                        </div>
+
+                        <!-- Top Leaderboard -->
+                        <div class="max-w-md mx-auto bg-navy-950 p-6 rounded-2xl border border-navy-800 space-y-3 font-kanit">
+                            <h4 class="text-electric font-bold text-sm uppercase tracking-wider text-left border-b border-navy-800 pb-2">
+                                📊 LEADERBOARD TOP PLAYERS
+                            </h4>
+                            ${sortedPlayers.length === 0 ? `<p class="text-xs text-slate-500">ไม่มีผู้เล่น</p>` : sortedPlayers.map((p, i) => `
+                                <div class="flex justify-between items-center py-2 px-3 bg-navy-900 rounded-xl">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="font-black text-lg ${i===0?'text-amber-400':i===1?'text-slate-300':'text-amber-600'}">
+                                            #${i+1}
+                                        </span>
+                                        <span class="font-bold text-slate-200">${p.name}</span>
+                                    </div>
+                                    <span class="font-mono text-lime font-extrabold text-lg">${p.score} pt</span>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Probability Debrief Summary -->
+                        <div class="bg-navy-950 p-6 rounded-2xl border border-navy-800 text-left font-kanit space-y-3">
+                            <h4 class="text-lime font-bold text-base flex items-center space-x-2">
+                                <span>💡</span>
+                                <span>สรุปการเชื่อมโยงสู่ความน่าจะเป็น (Probability Debrief)</span>
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300">
+                                <div class="bg-navy-900 p-3 rounded-xl border border-navy-800">
+                                    <strong class="text-electric block mb-1">1. Sample Space $S$</strong>
+                                    การสังเกตภาพคือการเก็บรวบรวมกลุ่มตัวอย่าง เช่น 20, 25 หรือ 30 ช่อง
+                                </div>
+                                <div class="bg-navy-900 p-3 rounded-xl border border-navy-800">
+                                    <strong class="text-accentYellow block mb-1">2. Probability $P(E)$</strong>
+                                    $P(E) = \frac{n(E)}{n(S)}$ เช่น $P(\text{🍎}) = \frac{3}{30} = 10\%$
+                                </div>
+                                <div class="bg-navy-900 p-3 rounded-xl border border-navy-800">
+                                    <strong class="text-lime block mb-1">3. Expected Value $E(X)$</strong>
+                                    ค่าคาดหมายช่วยในการประเมินการตัดสินใจด้วยน้ำหนักสถิติจริง
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-base font-kanit font-extrabold text-slate-200 pt-2">
+                            “จำให้แม่น แล้วเราจะเห็นความน่าจะเป็นจากข้อมูลจริง” 🎯
+                        </div>
+
+                        <button onclick="hostRestartGame()" class="px-8 py-3.5 bg-electric hover:bg-blue-600 text-white font-kanit font-extrabold text-base rounded-2xl shadow-lg transition">
+                            🔄 เริ่มรอบใหม่ในห้องเรียน
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Host Controller Actions
+        function changeRoomPin() {
+            const newPin = prompt("กรอก PIN Code 4 หลักที่ต้องการใช้งาน:", window.roomPin);
+            if (newPin && newPin.trim().length > 0) {
+                window.roomPin = newPin.trim();
+                window.roomState.pin = window.roomPin;
+                if (window.subscribeToRoom) {
+                    window.subscribeToRoom(window.roomPin);
+                }
+                showToast(`เปลี่ยน PIN เป็น ${window.roomPin} เรียบร้อย`, 'success');
+            }
+        }
+
+        function hostStartMemoryPhase() {
+            window.roomState.status = 'memory';
+            const roundData = GAME_DATA[window.roomState.currentRoundIdx];
+            window.roomState.memoryTimer = roundData.memoryTime;
+            window.pushStateToCloud();
+
+            if (window.hostTimerInterval) clearInterval(window.hostTimerInterval);
+
+            window.hostTimerInterval = setInterval(() => {
+                window.roomState.memoryTimer--;
+                playSound('tick');
+
+                if (window.roomState.memoryTimer <= 0) {
+                    clearInterval(window.hostTimerInterval);
+                    playSound('beep-high');
+                    hostEndMemoryPhase();
+                } else {
+                    window.pushStateToCloud();
+                }
+            }, 1000);
+        }
+
+        function hostEndMemoryPhase() {
+            if (window.hostTimerInterval) clearInterval(window.hostTimerInterval);
+            window.roomState.status = 'question';
+            window.roomState.questionStartTime = Date.now();
+            window.roomState.players.forEach(p => { p.lastAnswer = null; });
+            window.pushStateToCloud();
+        }
+
+        function hostShowExplanation() {
+            window.roomState.status = 'explanation';
+            playSound('reveal');
+            
+            // Trigger Confetti on host screen
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            }
+
+            window.pushStateToCloud();
+        }
+
+        function hostNextQuestion() {
+            const roundData = GAME_DATA[window.roomState.currentRoundIdx];
+            window.roomState.currentQuestionIdx++;
+
+            if (window.roomState.currentQuestionIdx < roundData.questions.length) {
+                window.roomState.status = 'question';
+                window.roomState.questionStartTime = Date.now();
+                window.roomState.players.forEach(p => { p.lastAnswer = null; });
+            } else {
+                window.roomState.currentRoundIdx++;
+                if (window.roomState.currentRoundIdx < GAME_DATA.length) {
+                    window.roomState.currentQuestionIdx = 0;
+                    hostStartMemoryPhase();
+                    return;
+                } else {
+                    window.roomState.status = 'final';
+                }
+            }
+            window.pushStateToCloud();
+        }
+
+        function hostRestartGame() {
+            window.roomState.currentRoundIdx = 0;
+            window.roomState.currentQuestionIdx = 0;
+            window.roomState.status = 'lobby';
+            window.roomState.players.forEach(p => { p.score = 0; p.lastAnswer = null; });
+            window.pushStateToCloud();
+        }
+
+        function toggleHostGridModal(show) {
+            const modal = document.getElementById('host-grid-modal');
+            if (!modal) return;
+            if (show) {
+                const roundData = GAME_DATA[window.roomState.currentRoundIdx];
+                if (!roundData || !roundData.grid) return;
+
+                let gridHtml = `<div class="grid gap-2 w-full mx-auto max-w-md" style="grid-template-columns: repeat(${roundData.gridSize.cols}, minmax(0, 1fr));">`;
+                for (let r = 0; r < roundData.gridSize.rows; r++) {
+                    for (let c = 0; c < roundData.gridSize.cols; c++) {
+                        gridHtml += `
+                            <div class="bg-navy-950 border border-navy-800 rounded-xl aspect-square flex items-center justify-center text-xl md:text-2xl">
+                                ${roundData.grid[r][c]}
+                            </div>
+                        `;
+                    }
+                }
+                gridHtml += `</div>`;
+
+                document.getElementById('host-modal-grid-content').innerHTML = gridHtml;
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+    </script>
+
+    <script>
+        // Player View UI Logic (Mobile Screen)
+        function renderPlayerView() {
+            const state = window.roomState;
+            const myPlayer = state.players.find(p => p.id === window.myPlayerId);
+
+            if (!myPlayer && (state.status === 'lobby' || state.status === 'memory' || state.status === 'question')) {
+                return `
+                    <div class="space-y-6 text-center bg-navy-900 border border-navy-800 p-6 rounded-3xl shadow-xl font-kanit">
+                        <div class="text-5xl">📱👀</div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">เข้าร่วมเกม "ตาดีมีแต้ม"</h2>
+                            <p class="text-xs text-slate-400 mt-1">ใส่รหัส PIN จากจออาจารย์เพื่อเข้าเล่นสด</p>
+                        </div>
+                        
+                        <div class="space-y-3 text-left">
+                            <div>
+                                <label class="text-xs text-slate-400 font-bold block mb-1">GAME PIN CODE</label>
+                                <input id="player-pin-input" type="text" value="${state.pin}" class="w-full bg-navy-950 border border-navy-700 px-4 py-3 rounded-xl font-mono text-center text-2xl text-lime font-bold focus:outline-none focus:border-electric">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 font-bold block mb-1">ชื่อเล่นของคุณ</label>
+                                <input id="player-name-input" type="text" value="${window.myPlayerName}" class="w-full bg-navy-950 border border-navy-700 px-4 py-3 rounded-xl text-center text-white font-bold focus:outline-none focus:border-electric">
+                            </div>
+                        </div>
+
+                        <button onclick="playerJoinRoom()" class="w-full py-4 bg-lime text-navy-950 font-black text-lg rounded-xl shadow-lg hover:bg-emerald-400 transition">
+                            เข้าห้องเรียนเรียลไทม์ ➔
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'lobby') {
+                return `
+                    <div class="text-center space-y-6 bg-navy-900 border border-navy-800 p-8 rounded-3xl font-kanit">
+                        <div class="text-6xl animate-bounce">👍</div>
+                        <h2 class="text-2xl font-bold text-white">คุณเข้าห้องเรียบร้อย!</h2>
+                        <p class="text-sm text-slate-300">ชื่อผู้เล่น: <strong class="text-lime">${myPlayer ? myPlayer.name : ''}</strong></p>
+                        <div class="p-4 bg-navy-950 rounded-2xl border border-navy-800 text-xs text-slate-400 leading-relaxed">
+                            👀 กรุณามองไปที่ **หน้าจอใหญ่ของอาจารย์**<br>อาจารย์กำลังรอนักศึกษาท่านอื่นเพื่อกดเริ่มเกม
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'memory') {
+                return `
+                    <div class="text-center space-y-6 bg-navy-900 border border-navy-800 p-8 rounded-3xl font-kanit">
+                        <div class="text-6xl animate-pulse">👁️</div>
+                        <h2 class="text-xl font-bold text-accentYellow">เพ่งสายตามองตารางบนจอใหญ่!</h2>
+                        <p class="text-xs text-slate-400">ภาพตารางจะถูกซ่อนเมื่อหมดเวลา</p>
+                        <div class="font-mono text-4xl text-lime font-extrabold bg-navy-950 p-4 rounded-2xl border border-navy-800">
+                            ${state.memoryTimer}s
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'question' || state.status === 'explanation') {
+                const roundData = GAME_DATA[state.currentRoundIdx];
+                const qData = roundData ? roundData.questions[state.currentQuestionIdx] : null;
+
+                const hasAnswered = (myPlayer && myPlayer.lastAnswer !== null && myPlayer.lastAnswer !== undefined);
+
+                const kahootBtns = [
+                    { bg: 'bg-kahootRed', shape: '▲', label: 'A', idx: 0 },
+                    { bg: 'bg-kahootBlue', shape: '◆', label: 'B', idx: 1 },
+                    { bg: 'bg-kahootYellow', shape: '●', label: 'C', idx: 2 },
+                    { bg: 'bg-kahootGreen', shape: '■', label: 'D', idx: 3 }
+                ];
+
+                if (hasAnswered && state.status === 'question') {
+                    return `
+                        <div class="text-center space-y-6 bg-navy-900 border border-navy-800 p-8 rounded-3xl font-kanit">
+                            <div class="text-5xl animate-bounce">✅</div>
+                            <h2 class="text-2xl font-bold text-lime">ส่งคำตอบเรียบร้อย!</h2>
+                            <p class="text-xs text-slate-400">รอนักศึกษาคนอื่นตอบและรออาจารย์กดเฉลยบนจอใหญ่</p>
+                            <div class="text-xs text-slate-500 font-mono">ส่งคำตอบตัวเลือก: ${kahootBtns[myPlayer.lastAnswer]?.label}</div>
+                        </div>
+                    `;
+                }
+
+                if (state.status === 'explanation') {
+                    const isCorrect = qData && (myPlayer.lastAnswer === qData.correct);
+
+                    return `
+                        <div class="text-center space-y-6 bg-navy-900 border border-navy-800 p-8 rounded-3xl font-kanit">
+                            <div class="text-6xl">${isCorrect ? '🎉' : '❌'}</div>
+                            <h2 class="text-2xl font-black ${isCorrect ? 'text-lime' : 'text-kahootRed'}">
+                                ${isCorrect ? 'ตอบถูกต้อง! (+100 pt)' : 'ตอบผิดอย่างน่าเสียดาย'}
+                            </h2>
+                            <div class="p-4 bg-navy-950 rounded-2xl border border-navy-800 text-xs text-slate-300">
+                                เฉลยข้อนี้: <strong class="text-accentYellow">${qData ? qData.options[qData.correct] : ''}</strong>
+                            </div>
+                            <div class="text-sm text-slate-300">คะแนนสะสมของคุณ: <span class="text-lime font-mono font-extrabold text-lg">${myPlayer ? myPlayer.score : 0} pt</span></div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="space-y-4 font-kanit">
+                        <div class="flex justify-between items-center text-xs text-slate-300 bg-navy-900 p-3 rounded-xl border border-navy-800">
+                            <span>ผู้เล่น: <strong class="text-white">${myPlayer ? myPlayer.name : ''}</strong></span>
+                            <span>คะแนน: <strong class="text-lime font-mono text-sm">${myPlayer ? myPlayer.score : 0} pt</strong></span>
+                        </div>
+
+                        <p class="text-xs text-center text-slate-400 font-bold">เลือกคำตอบบนมือถือของคุณ:</p>
+
+                        <div class="grid grid-cols-2 gap-3 h-64">
+                            ${kahootBtns.map(b => `
+                                <button onclick="playerSubmitAnswer(${b.idx})" class="kahoot-btn ${b.bg} text-white rounded-2xl flex flex-col items-center justify-center p-4 text-3xl font-black transition active:scale-95">
+                                    <span>${b.shape}</span>
+                                    <span class="text-xs font-bold mt-1">${b.label}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.status === 'final') {
+                return `
+                    <div class="text-center space-y-6 bg-navy-900 border border-navy-800 p-8 rounded-3xl font-kanit">
+                        <div class="text-6xl">🏆</div>
+                        <h2 class="text-2xl font-black text-white">จบการแข่งขัน!</h2>
+                        <div class="p-4 bg-navy-950 rounded-2xl border border-navy-800">
+                            <span class="text-xs text-slate-400 block mb-1">คะแนนรวมของคุณ</span>
+                            <span class="font-mono text-4xl text-lime font-extrabold">${myPlayer ? myPlayer.score : 0} pt</span>
+                        </div>
+                        <p class="text-xs text-slate-400">ขอบคุณสำหรับการเข้าร่วมสนุกในห้องเรียน!</p>
+                    </div>
+                `;
+            }
+
+            return ``;
+        }
+
+        // Player Actions
+        function playerJoinRoom() {
+            const pinVal = document.getElementById('player-pin-input')?.value.trim();
+            const nameVal = document.getElementById('player-name-input')?.value.trim();
+
+            if (!nameVal) {
+                showToast('กรุณากรอกชื่อเล่นของคุณ', 'error');
+                return;
+            }
+
+            if (pinVal && pinVal !== window.roomPin) {
+                window.roomPin = pinVal;
+                if (window.subscribeToRoom) {
+                    window.subscribeToRoom(window.roomPin);
+                }
+            }
+
+            window.myPlayerName = nameVal;
+            const existing = window.roomState.players.find(p => p.id === window.myPlayerId);
+            if (!existing) {
+                window.roomState.players.push({
+                    id: window.myPlayerId,
+                    name: window.myPlayerName,
+                    score: 0,
+                    lastAnswer: null,
+                    answeredAt: 0
+                });
+            } else {
+                existing.name = window.myPlayerName;
+            }
+
+            playSound('join');
+            showToast(`เข้าร่วมห้อง PIN ${window.roomPin} แล้ว!`, 'success');
+            window.pushStateToCloud();
+        }
+
+        function playerSubmitAnswer(optionIdx) {
+            const myPlayer = window.roomState.players.find(p => p.id === window.myPlayerId);
+            if (!myPlayer || myPlayer.lastAnswer !== null) return;
+
+            const roundData = GAME_DATA[window.roomState.currentRoundIdx];
+            const qData = roundData ? roundData.questions[window.roomState.currentQuestionIdx] : null;
+
+            myPlayer.lastAnswer = optionIdx;
+            myPlayer.answeredAt = Date.now();
+
+            if (qData && optionIdx === qData.correct) {
+                myPlayer.score += 100;
+                playSound('correct');
+            } else {
+                playSound('wrong');
+            }
+
+            showToast('ส่งคำตอบแล้ว!', 'success');
+            window.pushStateToCloud();
+        }
+    </script>
+</body>
+</html>
